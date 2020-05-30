@@ -67,3 +67,47 @@ func Parse(s string) ([]int, error) {
 	sort.Ints(cpus)
 	return cpus, nil
 }
+
+// Unparse takes a cpuset as (unsorted) slice of ints and returns a representing cpuset definition
+func Unparse(v []int) string {
+	cpus := sorted(v)
+	num := len(cpus)
+
+	if num == 0 {
+		return ""
+	}
+	if num == 1 {
+		return fmt.Sprintf("%d", cpus[0])
+	}
+
+	makeAtom := func(cpus []int, begin, end int) string {
+		if begin < (end - 1) { // range
+			return fmt.Sprintf("%d-%d", cpus[begin], cpus[end-1])
+		}
+		return fmt.Sprintf("%d", cpus[begin])
+	}
+
+	var atoms []string
+	begin := 0 // of the potential range
+	end := 1   // of the potential range
+	for end < num {
+		if (cpus[end] - cpus[end-1]) > 1 { // seam
+			atoms = append(atoms, makeAtom(cpus, begin, end))
+			begin = end
+		}
+		end++
+	}
+	// collect reminder
+	if begin < end {
+		atoms = append(atoms, makeAtom(cpus, begin, end))
+
+	}
+	return strings.Join(atoms, ",")
+}
+
+func sorted(v []int) []int {
+	r := make([]int, len(v))
+	copy(r, v)
+	sort.Ints(r)
+	return r
+}

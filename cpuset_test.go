@@ -40,22 +40,39 @@ func TestParseRange(t *testing.T) {
 		{"0,1,1,3", []int{0, 1, 1, 3}},
 	}
 	for _, testCase := range testCases {
-		testCase.CheckSlices(t)
+		testCase.CheckParseSlices(t)
 	}
 }
 
-func TestRangeInterval(t *testing.T) {
-	testCases := []tcase{
-		{"0-7", []int{0, 1, 2, 3, 4, 5, 6, 7}},
-		{"0-3,4-7", []int{0, 1, 2, 3, 4, 5, 6, 7}},
-		{"1,2-5,6", []int{1, 2, 3, 4, 5, 6}},
-	}
-	for _, testCase := range testCases {
-		testCase.CheckSlices(t)
+var cpuSetTestCases []tcase = []tcase{
+	{"", []int{}},
+	{"1", []int{1}},
+	{"0-7", []int{0, 1, 2, 3, 4, 5, 6, 7}},
+	{"0-3,5-7", []int{0, 1, 2, 3, 5, 6, 7}},
+	{"0,2-7", []int{0, 2, 3, 4, 5, 6, 7}},
+	{"0,4,7-15", []int{0, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
+	{"0-5,7", []int{0, 1, 2, 3, 4, 5, 7}},
+}
+
+func TestParseRangeInterval(t *testing.T) {
+	for _, testCase := range cpuSetTestCases {
+		testCase.CheckParseSlices(t)
 	}
 }
 
-func TestRangeIntervalMalformed(t *testing.T) {
+func TestUnparseRangeInterval(t *testing.T) {
+	for _, testCase := range cpuSetTestCases {
+		testCase.CheckUnparseSlices(t)
+	}
+}
+
+func TestParseUnparseRangeInterval(t *testing.T) {
+	for _, testCase := range cpuSetTestCases {
+		testCase.CheckParseUnparseSlices(t)
+	}
+}
+
+func TestParseRangeIntervalMalformed(t *testing.T) {
 	testCases := []tcase{
 		{",", nil},
 		{"-", nil},
@@ -73,6 +90,14 @@ func TestRangeIntervalMalformed(t *testing.T) {
 	}
 }
 
+func mustParse(t *testing.T, s string) []int {
+	cpus, err := Parse(s)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	return cpus
+}
+
 func checkEmpty(t *testing.T, cpus []int) {
 	if cpus == nil {
 		t.Errorf("empty must not be nil")
@@ -80,7 +105,6 @@ func checkEmpty(t *testing.T, cpus []int) {
 	if len(cpus) != 0 {
 		t.Errorf("empty must have zero length")
 	}
-
 }
 
 type tcase struct {
@@ -88,13 +112,25 @@ type tcase struct {
 	v []int
 }
 
-func (tc tcase) CheckSlices(t *testing.T) {
-	cpus, err := Parse(tc.s)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+func (tc tcase) CheckParseSlices(t *testing.T) {
+	cpus := mustParse(t, tc.s)
 	if !reflect.DeepEqual(cpus, tc.v) {
 		t.Errorf("slices differ: expected=%v cpus=%v", tc.v, cpus)
+	}
+}
+
+func (tc tcase) CheckUnparseSlices(t *testing.T) {
+	cpus := Unparse(tc.v)
+	if tc.s != cpus {
+		t.Errorf("strings differ: expected=%q cpus=%q", tc.s, cpus)
+	}
+}
+
+func (tc tcase) CheckParseUnparseSlices(t *testing.T) {
+	cpus := mustParse(t, tc.s)
+	cpuString := Unparse(cpus)
+	if cpuString != tc.s {
+		t.Errorf("parse/unparse mismatch: expected=%s cpuString=%s cpus=%q", tc.s, cpuString, cpus)
 	}
 }
 
